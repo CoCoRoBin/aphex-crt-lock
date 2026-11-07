@@ -1,0 +1,12 @@
+# Local backups and editor files
+*.bak
+*.bak.*
+*~
+*.swp
+*.swo
+.DS_Store
+# Local state and credentials
+.env
+.env.*
+*.log
+.cache/

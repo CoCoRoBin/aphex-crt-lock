@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "id": "neo.lock",
+  "name": "Aphex CRT Lock",
+  "version": "2.0.0",
+  "author": "neo",
+  "description": "SYRO CRT lock with glowing floating logo, perspective grid, reflection and Iosevka clock.",
+  "omarchy": {
+    "capabilities": [
+      "authentication"
+    ],
+    "clonedFrom": "omarchy.lock"
+  },
+  "kinds": [
+    "service"
+  ],
+  "keepLoaded": true,
+  "entryPoints": {
+    "service": "Service.qml"
+  }
+}

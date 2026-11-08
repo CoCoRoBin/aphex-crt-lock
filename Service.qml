@@ -292,6 +292,12 @@ Item {
         onSubmitPassword: function(password) { root.submitPassword(password) }
         onClearFailureRequested: root.failureMessage = ""
         onWakeRequested: root.runWake()
+        onPowerActionRequested: function(action) {
+          if (!root.currentlyLocked() || powerProcess.running) return
+          if (action !== "reboot" && action !== "poweroff") return
+          powerProcess.command = ["systemctl", action]
+          powerProcess.running = true
+        }
       }
 
     }
@@ -410,6 +416,16 @@ Item {
       // A lock taken while this was in flight is this shell's own.
       root.strandedLock = exitCode === 0 && !root.currentlyLocked()
       root.recoverStrandedLock()
+    }
+  }
+
+  Process {
+    id: powerProcess
+    onExited: function(exitCode) {
+      if (exitCode !== 0) {
+        root.failureMessage = "Power action failed; try again or use the power button."
+        root.runWake()
+      }
     }
   }
 

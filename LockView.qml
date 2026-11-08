@@ -1,5 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import QtQuick.Window
 import qs.Commons
 import qs.Commons as Commons
 import qs.Ui
@@ -59,6 +60,8 @@ Item {
     onTriggered: root.now = new Date()
   }
 
+  property string pendingPowerAction: ""
+  signal powerActionRequested(string action)
   signal submitPassword(string password)
   signal passwordTextEdited(string password)
   signal clearFailureRequested()
@@ -87,6 +90,15 @@ Item {
     passwordInput.text = passwordText
     syncingPasswordText = false
   }
+
+  // Restore focus after a suspend/VT switch and after PAM re-enables input.
+  function restorePasswordFocus() {
+    if (inputEnabled && passwordInput.enabled && !passwordInput.activeFocus)
+      forcePasswordFocus()
+  }
+  Window.onActiveFocusItemChanged: Qt.callLater(restorePasswordFocus)
+  Window.onActiveChanged: if (Window.active) Qt.callLater(restorePasswordFocus)
+  onAuthenticatingPasswordChanged: Qt.callLater(restorePasswordFocus)
 
   onPasswordTextChanged: syncPasswordText()
   onInputEnabledChanged: {
@@ -220,6 +232,7 @@ Item {
         clip: true
         enabled: root.inputEnabled && !root.authenticatingPassword
         readOnly: root.authenticatingPassword
+        inputMethodHints: Qt.ImhHiddenText | Qt.ImhSensitiveData | Qt.ImhNoPredictiveText
         echoMode: TextInput.Password
         passwordCharacter: "\u25CF"
         passwordMaskDelay: 0
@@ -252,6 +265,10 @@ Item {
 
         Keys.onPressed: function(event) {
           root.wakeRequested()
+          if (event.isAutoRepeat && event.key !== Qt.Key_Backspace && event.key !== Qt.Key_Delete) {
+            event.accepted = true
+            return
+          }
           if (event.key === Qt.Key_Escape || (event.modifiers & Qt.ControlModifier && event.key === Qt.Key_U)) {
             root.passwordTextEdited("")
             event.accepted = true
@@ -289,6 +306,64 @@ Item {
         font.pixelSize: Math.round(root.fieldFontSize * 1.1)
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
+      }
+    }
+
+    Column {
+      anchors.left: parent.left
+      anchors.bottom: parent.bottom
+      anchors.margins: Math.max(24, root.width * 0.035)
+      spacing: 12
+
+      Text {
+        textFormat: Text.PlainText
+        text: root.pendingPowerAction === "" ? "" :
+          (root.pendingPowerAction === "reboot" ? "Restart? Unsaved work may be lost." : "Shut down? Unsaved work may be lost.")
+        visible: root.pendingPowerAction !== ""
+        color: root.accent
+        font.family: "Iosevka"
+        font.pixelSize: 14
+      }
+      Row {
+        spacing: 14
+        Repeater {
+          model: root.pendingPowerAction === "" ? ["Restart", "Shut down"] : ["Confirm", "Cancel"]
+          delegate: Rectangle {
+            id: powerButton
+            required property string modelData
+            width: powerLabel.implicitWidth + 30
+            height: 42
+            color: powerMouse.containsMouse ? "#33402a" : "#ed0b1209"
+            border.color: root.accent
+            radius: 2
+            Text {
+              id: powerLabel
+              anchors.centerIn: parent
+              textFormat: Text.PlainText
+              text: powerButton.modelData
+              color: root.accent
+              font.family: "Iosevka"
+              font.pixelSize: 14
+            }
+            MouseArea {
+              id: powerMouse
+              anchors.fill: parent
+              hoverEnabled: true
+              enabled: root.inputEnabled
+              onEntered: root.wakeRequested()
+              onClicked: {
+                root.wakeRequested()
+                if (powerButton.modelData === "Restart") root.pendingPowerAction = "reboot"
+                else if (powerButton.modelData === "Shut down") root.pendingPowerAction = "poweroff"
+                else if (powerButton.modelData === "Confirm") {
+                  root.powerActionRequested(root.pendingPowerAction)
+                  root.pendingPowerAction = ""
+                } else root.pendingPowerAction = ""
+                root.restorePasswordFocus()
+              }
+            }
+          }
+        }
       }
     }
   }

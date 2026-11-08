@@ -57,3 +57,11 @@ Historical local backups: `~/.config/omarchy/shell.json.before-aphex-lock` and `
 ## Origin
 
 The service and plugin structure originate from Omarchy; the CRT appearance is a local customization. Original artwork is retained. No new license grant is implied for upstream code or artwork.
+
+## Wake input and power controls
+
+The password field restores focus after window activation, focus loss, and a completed PAM check. It sets hidden/sensitive/no-prediction input hints and ignores character auto-repeat after display wake (Backspace/Delete still repeat). This follows the stock lock's suspend focus recovery; intermittent Super-only input still needs a real suspend/resume check.
+
+Input hints do not disable or isolate Fcitx or other input methods. This plugin shares the Omarchy shell process; it does not provide a separate input-method security boundary.
+
+Restart and Shut down controls sit at the bottom left and require a second Confirm click. They call systemctl directly while keeping the session locked; Cancel returns to password entry. Preview cannot execute power actions. Runtime loading and QML parsing were checked; actual power actions and suspend authentication were not executed during this change.
